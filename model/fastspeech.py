@@ -5,9 +5,10 @@ import torch.nn.functional as F
 from torch.nn import Sequential
 from model.aligner import GraphemeAligner
 from typing import Union, Tuple
-from configs.fastspeech_config import FastSpeechConfig
+from model.fastspeech_config import FastSpeechConfig
 from torch.nn.utils.rnn import pad_sequence
 from featurizer.mel_config import MelSpectrogramConfig
+import wandb
 
 
 class PositionalEncoding(nn.Module):
@@ -118,7 +119,7 @@ class DurationPredictor(nn.Module):
         x = self.dropout1(self.ln_1(x))
         x = self.conv2(x.transpose(-1, -2)).transpose(-1, -2)
         x = self.dropout2(self.ln_2(x))
-        return self.out(x)
+        return self.out(x).squeeze(-1)
 
 
 class LengthRegulator(nn.Module):
@@ -127,20 +128,21 @@ class LengthRegulator(nn.Module):
         self.alpha = alpha
         self.dur_pred = DurationPredictor(config)
 
-    def forward(self, x, durations=None):
+    def forward(self, x, token_lengths, durations=None):
         duration_preds = self.dur_pred(x).exp()    # lengths >= 0
-        duration_preds = (duration_preds * self.alpha).long()
+        duration_preds = (duration_preds * self.alpha).round()
         if durations is None:
             durations = duration_preds
         h_mel = []
-        for h_pho, duration in (x, durations):
-            h_mel.append(torch.repeat_interleave(h_pho, duration, 0))
-        return pad_sequence(h_mel, batch_first=True, padding_value=MelSpectrogramConfig().pad_value), duration_preds
+        # print(durations.size(), x.size())
+        for h_pho, duration, tok_len in zip(x, durations.long(), token_lengths.int()):
+            h_mel.append(torch.repeat_interleave(h_pho[:tok_len.item()], duration[:tok_len.item()], 0))
+        return pad_sequence(h_mel, batch_first=True), duration_preds
 
 
 class FastSpeech(nn.Module):
     def __init__(self, n_vocab, config: FastSpeechConfig):
-        super(FastSpeech, self).__init__()
+        super().__init__()
         self.d_model = config.d_model
         self.emb_encoder = nn.Embedding(n_vocab, config.d_model)
         self.phoneme_pe = PositionalEncoding(config.d_model, config.max_phoneme_len, config.dropout_rate)
@@ -154,11 +156,12 @@ class FastSpeech(nn.Module):
         phoneme_emb = self.emb_encoder(batch.tokens) * np.sqrt(self.d_model)
         phoneme_emb = self.phoneme_pe(phoneme_emb)
         enc_out = self.phoneme_fft(phoneme_emb)
-        mel_emb, _ = self.len_reg(enc_out, batch.durations)
+        mel_emb, dur_pred = self.len_reg(enc_out, batch.token_lengths, batch.durations)
+        batch.duration_preds = dur_pred
         mel_emb = self.mel_pe(mel_emb)
         dec_out = self.mel_fft(mel_emb)
         out = self.linear(dec_out)
-        return out
+        return out.transpose(-1, -2)    # N x FT x L
 
 
 # a = torch.randn(2, 3, 4)
