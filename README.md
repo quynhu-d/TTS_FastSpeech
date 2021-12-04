@@ -7,5 +7,5 @@
     ├── featurizer              # melspec
     ├── model                   # FastSpeech, Vocoder, Grapheme Aligner
     ├── trainer                 # training functions
-    ├── Clean_TTS.ipynb               # overfit on one batch
+    ├── Clean_TTS.ipynb         # overfit on one batch
     └── requirements.txt
