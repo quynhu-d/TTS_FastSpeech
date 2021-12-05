@@ -7,7 +7,7 @@ from data import LJSpeechDataset, LJSpeechCollator
 from featurizer import MelSpectrogramConfig, MelSpectrogram
 from model import FastSpeech, FastSpeechConfig
 from model import GraphemeAligner, Vocoder
-from trainer import TrainConfig
+from trainer.trainer_config import TrainConfig
 import errno
 
 
