@@ -3,17 +3,23 @@ import torch
 import torch.nn.functional as F
 import wandb
 from torch.utils.data import DataLoader
-
 from data import LJSpeechDataset, LJSpeechCollator
 from featurizer import MelSpectrogramConfig, MelSpectrogram
 from model import FastSpeech, FastSpeechConfig
 from model import GraphemeAligner, Vocoder
 from trainer import TrainConfig
+import errno
 
 
 def train(train_config: TrainConfig, mel_config: MelSpectrogramConfig, fconfig: FastSpeechConfig):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    train_dataloader = DataLoader(LJSpeechDataset(train_config.lj_path), batch_size=train_config.batch_size, collate_fn=LJSpeechCollator())
+    try:
+        train_dataloader = DataLoader(
+            LJSpeechDataset(train_config.lj_path), batch_size=train_config.batch_size, collate_fn=LJSpeechCollator()
+        )
+    except errno:
+        raise "No dataset found at %s" % train_config.lj_path
+
     featurizer = MelSpectrogram(mel_config)
     model = FastSpeech(51, fconfig).to(device)
     aligner = GraphemeAligner().to(device)
