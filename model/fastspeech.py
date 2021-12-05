@@ -106,13 +106,14 @@ class DurationPredictor(nn.Module):
         self.ln_2 = Sequential(nn.LayerNorm(config.d_model), nn.ReLU())
         self.dropout2 = nn.Dropout(config.dropout_rate)
         self.out = nn.Linear(config.d_model, 1)
+        self.relu = nn.ReLU()    # to get log of lengths >= 0
 
     def forward(self, x):
         x = self.conv1(x.transpose(-1, -2)).transpose(-1, -2)
         x = self.dropout1(self.ln_1(x))
         x = self.conv2(x.transpose(-1, -2)).transpose(-1, -2)
         x = self.dropout2(self.ln_2(x))
-        return self.out(x).squeeze(-1)
+        return self.relu(self.out(x)).squeeze(-1)
 
 
 class LengthRegulator(nn.Module):
@@ -122,7 +123,7 @@ class LengthRegulator(nn.Module):
         self.dur_pred = DurationPredictor(config)
 
     def forward(self, x, token_lengths, durations=None):
-        duration_preds = self.dur_pred(x).exp()    # lengths >= 0
+        duration_preds = self.dur_pred(x).exp()    # lengths >= 1
         duration_preds = (duration_preds * self.alpha).round()
         if durations is None:
             durations = duration_preds

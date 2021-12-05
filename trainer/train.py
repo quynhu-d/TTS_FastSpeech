@@ -49,9 +49,9 @@ def train(
             durations = aligner(batch.waveform, batch.waveform_length, batch.transcript)
             durations *= batch.mel.size(-1)
             batch.durations = durations.round()
-            batch.to(device)
+            batch.durations.to(device)
             output = model(batch)
-            batch.to(device)    # batch.duration_preds
+            batch.duration_preds.to(device)    # batch.duration_preds
             # print(batch.duration_preds.sum(1), batch.mel.size(-1), batch.durations.sum(1))
             dp_loss = F.mse_loss(batch.duration_preds, batch.durations)
             # print(output.size(), batch.mel.size())
@@ -74,19 +74,30 @@ def train(
             optimizer.step()
             if vocoder is not None:
                 wav = vocoder.inference(output.to(device))
+                idx = np.random.randint(batch.mel.shape[0])
+                wandb.log({
+                    'loss': loss.item(),
+                    'mel_loss': mel_loss.item(),
+                    'dp_loss': dp_loss.item(),
+                    'mel': wandb.Image(batch.mel[idx]),
+                    'mel_pred': wandb.Image(output[idx]),
+                    'audio': wandb.Audio(batch.waveform[idx].detach().cpu().numpy(),
+                                         sample_rate=MelSpectrogramConfig.sr),
+                    'audio_pred': wandb.Audio(wav[idx].detach().cpu().numpy(), sample_rate=MelSpectrogramConfig.sr),
+                    'step': i
+                })
             else:
-                wav = None
-            idx = np.random.randint(batch.mel.shape[0])
-            wandb.log({
-                'loss': loss.item(),
-                'mel_loss': mel_loss.item(),
-                'dp_loss': dp_loss.item(),
-                'mel': wandb.Image(batch.mel[idx]),
-                'mel_pred': wandb.Image(output[idx]),
-                'audio': wandb.Audio(batch.waveform[idx].detach().cpu().numpy(), sample_rate=MelSpectrogramConfig.sr),
-                'audio_pred': wandb.Audio(wav[idx].detach().cpu().numpy(), sample_rate=MelSpectrogramConfig.sr),
-                'step': i
-            })
+                idx = np.random.randint(batch.mel.shape[0])
+                wandb.log({
+                    'loss': loss.item(),
+                    'mel_loss': mel_loss.item(),
+                    'dp_loss': dp_loss.item(),
+                    'mel': wandb.Image(batch.mel[idx]),
+                    'mel_pred': wandb.Image(output[idx]),
+                    'audio': wandb.Audio(batch.waveform[idx].detach().cpu().numpy(),
+                                         sample_rate=MelSpectrogramConfig.sr),
+                    'step': i
+                })
 
 
 if __name__ == '__main__':
