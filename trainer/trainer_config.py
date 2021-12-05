@@ -5,10 +5,10 @@ from dataclasses import dataclass
 class TrainConfig:
     wandb_project: str = 'TTS_FastSpeech'
     wandb_name: str = 'default'
-    display_every: int = 1    # results logging step
+    display_every: int = 100    # audio logging step
 
     lj_path: str = '.'
-    batch_size: int = 20
+    batch_size: int = 3
     val_split: float = None
 
     n_epochs: int = 50
