@@ -5,7 +5,7 @@ from torch import nn
 from torch.nn import Sequential
 from torch.nn.utils.rnn import pad_sequence
 
-from model import FastSpeechConfig
+from model.fastspeech_config import FastSpeechConfig
 
 
 class PositionalEncoding(nn.Module):
