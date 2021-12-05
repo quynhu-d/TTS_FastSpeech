@@ -7,8 +7,12 @@
     ├── featurizer              # melspec
     ├── model                   # FastSpeech, Vocoder, Grapheme Aligner
     ├── trainer                 # training functions
-    ├── Clean_TTS.ipynb         # overfit on one batch
+    ├── test                    # test function
+    ├── Clean_TTS.ipynb         # example of model training and testing
     └── requirements.txt
+
+## Report
+For training and testing runs see `Clean_TTS.ipynb`. [Report]() and [loggings]() located in `wandb` project.
 
 ## Cloning
     !git clone https://github.com/quynhu-d/TTS_FastSpeech
@@ -33,7 +37,7 @@ Training is performed with `train.py` from trainer directory, configurations can
 
 
 ## Audio logging (Vocoder)
-Vocoder is to be initialized from waveglow repository and to be passed to train function if audio tracking is needed.
+`Vocoder` is to be initialized from `waveglow` repository and to be passed to train function if audio tracking is needed.
     
     from model import Vocoder
 
@@ -52,4 +56,14 @@ Vocoder is to be initialized from waveglow repository and to be passed to train 
     train(train_config, mel_config, fconfig, vocoder)
 
 ## Inference
-TODO
+For inference use `test.py` in `test` directory. `Vocoder` is to be created as in section above. Set `FastSpeechConfig` and `model_path` to load trained model.
+
+    transcript = [
+            "A defibrillator is a device that gives a high energy electric shock to the heart of someone who is in cardiac arrest",
+            "Massachusetts Institute of Technology may be best known for its math, science and engineering education",
+            "Wasserstein distance or Kantorovich Rubinstein metric is a distance function defined between probability distributions on a given metric space"
+    ]
+    fconfig = FastSpeechConfig()
+    vocoder = Vocoder()    # import as stated above
+    model_path = '/saved/01-01-70-00-00/model.pth'
+    wavs_pred = test(vocoder, fconfig, model_path, transcript)
