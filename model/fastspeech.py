@@ -1,14 +1,11 @@
-import torch
-from torch import nn
 import numpy as np
+import torch
 import torch.nn.functional as F
+from torch import nn
 from torch.nn import Sequential
-from model.aligner import GraphemeAligner
-from typing import Union, Tuple
-from model.fastspeech_config import FastSpeechConfig
 from torch.nn.utils.rnn import pad_sequence
-from featurizer.mel_config import MelSpectrogramConfig
-import wandb
+
+from model import FastSpeechConfig
 
 
 class PositionalEncoding(nn.Module):
@@ -102,15 +99,11 @@ class FFTBlock(nn.Module):
 class DurationPredictor(nn.Module):
     def __init__(self, config: FastSpeechConfig = FastSpeechConfig()):
         super(DurationPredictor, self).__init__()
-        self.conv1 = Sequential(
-            nn.Conv1d(config.d_model, config.conv_hid_sz, config.kernel_sz, padding='same'), nn.ReLU()
-        )
-        self.ln_1 = nn.LayerNorm(config.conv_hid_sz)
+        self.conv1 = nn.Conv1d(config.d_model, config.conv_hid_sz, config.kernel_sz, padding='same')
+        self.ln_1 = Sequential(nn.LayerNorm(config.conv_hid_sz), nn.ReLU())
         self.dropout1 = nn.Dropout(config.dropout_rate)
-        self.conv2 = Sequential(
-            nn.Conv1d(config.conv_hid_sz, config.d_model, config.kernel_sz, padding='same'), nn.ReLU()
-        )
-        self.ln_2 = nn.LayerNorm(config.d_model)
+        self.conv2 = nn.Conv1d(config.conv_hid_sz, config.d_model, config.kernel_sz, padding='same')
+        self.ln_2 = Sequential(nn.LayerNorm(config.d_model), nn.ReLU())
         self.dropout2 = nn.Dropout(config.dropout_rate)
         self.out = nn.Linear(config.d_model, 1)
 
@@ -171,3 +164,7 @@ class FastSpeech(nn.Module):
 # print(MultiHeadAttention(4, 2, 2, 8)(a_).shape)
 # print(FFTBlock(4, 2, 2, 2)(a).shape)
 # print(DurationPredictor(4, 2, 3)(a).shape)
+
+if __name__ == '-__main__':
+    fconfig = FastSpeechConfig()
+    model = FastSpeech(51, fconfig)
