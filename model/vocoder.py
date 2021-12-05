@@ -4,16 +4,16 @@ import warnings
 import torch
 from torch import nn
 
-sys.path.append('waveglow/')
+# sys.path.append('waveglow/')
 
-warnings.filterwarnings('ignore')
+# warnings.filterwarnings('ignore')
 
 
 class Vocoder(nn.Module):
     def __init__(self):
-        super(Vocoder, self).__init__()
+        super().__init__()
 
-        model = torch.load('waveglow_256channels_universal_v5.pt', map_location='cpu')[
+        model = torch.load('../waveglow_256channels_universal_v5.pt', map_location='cpu')[
             'model']
         self.net = model.remove_weightnorm(model)
 
