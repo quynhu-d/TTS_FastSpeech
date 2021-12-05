@@ -80,7 +80,7 @@ def train(
             if loss.item() <= min_loss:
                 min_loss = loss.item()
                 torch.save(model.state_dict(), model_path + '/best_loss_model.pth')
-            torch.save(model.state_dict(), model_path + 'checkpoint_model.pth')
+            torch.save(model.state_dict(), model_path + '/checkpoint_model.pth')
             loss.backward()
             optimizer.step()
 
