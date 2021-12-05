@@ -9,9 +9,15 @@ from model import FastSpeech, FastSpeechConfig
 from model import GraphemeAligner, Vocoder
 from trainer.trainer_config import TrainConfig
 import errno
+import os
 
 
-def train(train_config: TrainConfig, mel_config: MelSpectrogramConfig, fconfig: FastSpeechConfig):
+def train(
+        train_config: TrainConfig,
+        mel_config: MelSpectrogramConfig,
+        fconfig: FastSpeechConfig,
+        vocoder: Vocoder = None
+):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     try:
         train_dataloader = DataLoader(
@@ -20,12 +26,21 @@ def train(train_config: TrainConfig, mel_config: MelSpectrogramConfig, fconfig: 
     except errno:
         raise "No dataset found at %s" % train_config.lj_path
 
+    if not os.path.exists(train_config.save_dir):
+        os.mkdir(train_config.save_dir)
+    import time
+    model_path = train_config.save_dir + '/%s/' % (time.strftime("%d-%m-%I-%M-%S"))
+    os.mkdir(model_path)
+    print('Saving model at %s' % model_path)
+
     featurizer = MelSpectrogram(mel_config)
     model = FastSpeech(51, fconfig).to(device)
     aligner = GraphemeAligner().to(device)
-    vocoder = Vocoder().to(device).eval()
+    if vocoder is not None:
+        vocoder = vocoder.to(device).eval()
     optimizer = torch.optim.Adam(model.parameters(), train_config.lr, (.9, .98))
     wandb.init(name=train_config.wandb_name, project=train_config.wandb_project)
+    min_loss = None
     for i in range(train_config.n_epochs):
         for batch in train_dataloader:
             batch.to(device)
@@ -50,14 +65,22 @@ def train(train_config: TrainConfig, mel_config: MelSpectrogramConfig, fconfig: 
             # print(batch.mel.shape, output.shape)
             mel_loss = F.mse_loss(output, batch.mel)
             loss = mel_loss + dp_loss
+            if i == 0:
+                min_loss = loss.item()
+            if loss.item() < min_loss:
+                min_loss = loss.item()
+                torch.save(model.state_dict(), model_path + '/model.pth')
             loss.backward()
             optimizer.step()
-            wav = vocoder.inference(output.to(device))
+            if vocoder is not None:
+                wav = vocoder.inference(output.to(device))
+            else:
+                wav = None
             idx = np.random.randint(batch.mel.shape[0])
             wandb.log({
-                'loss': loss,
-                'mel_loss': mel_loss,
-                'dp_loss': dp_loss,
+                'loss': loss.item(),
+                'mel_loss': mel_loss.item(),
+                'dp_loss': dp_loss.item(),
                 'mel': wandb.Image(batch.mel[idx]),
                 'mel_pred': wandb.Image(output[idx]),
                 'audio': wandb.Audio(batch.waveform[idx].detach().cpu().numpy(), sample_rate=MelSpectrogramConfig.sr),
