@@ -79,7 +79,8 @@ def train(
                 min_loss = loss.item()
             if loss.item() <= min_loss:
                 min_loss = loss.item()
-                torch.save(model.state_dict(), model_path + '/model.pth')
+                torch.save(model.state_dict(), model_path + '/best_loss_model.pth')
+            torch.save(model.state_dict(), model_path + 'checkpoint_model.pth')
             loss.backward()
             optimizer.step()
 
@@ -114,6 +115,7 @@ def train(
                     'step': j,
                     'epoch': i
                 })
+    return model
 
 
 if __name__ == '__main__':

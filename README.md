@@ -7,12 +7,12 @@
     ├── featurizer              # melspec
     ├── model                   # FastSpeech, Vocoder, Grapheme Aligner
     ├── trainer                 # training functions
-    ├── test                    # test function
+    ├── tester                  # test function
     ├── Clean_TTS.ipynb         # example of model training and testing
     └── requirements.txt
 
 ## Report
-For training and testing runs see `Clean_TTS.ipynb`. [Report]() and [loggings]() located in `wandb` project.
+For training and testing runs see `Clean_TTS.ipynb`. [Report](https://wandb.ai/quynhu_d/TTS_FastSpeech/reports/TTS-FastSpeech--VmlldzoxMzAzOTIz) and [loggings](https://wandb.ai/quynhu_d/TTS_FastSpeech?workspace=user-quynhu_d) located in `wandb` project.
 
 ## Cloning
     !git clone https://github.com/quynhu-d/TTS_FastSpeech
