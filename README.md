@@ -34,6 +34,7 @@ Training is performed with `train.py` from trainer directory, configurations can
     mel_config = MelSpectrogramConfig()
     fconfig = FastSpeechConfig()
     train(train_config, mel_config, fconfig)
+> To continue training from checkpoint, define `model_cp_path` in `train`.
 
 
 ## Audio logging (Vocoder)
