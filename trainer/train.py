@@ -10,13 +10,16 @@ from model import GraphemeAligner, Vocoder
 from trainer.trainer_config import TrainConfig
 import errno
 import os
+from typing import Tuple
 
 
 def train(
         train_config: TrainConfig,
         mel_config: MelSpectrogramConfig,
         fconfig: FastSpeechConfig,
-        vocoder: Vocoder = None
+        vocoder: Vocoder = None,    # pass mel2wav model to log audio
+        model_cp_path: str = None,
+        wandb_resume: Tuple[str, str] = (None, None)    # resume mode and run id
 ):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('Training on', device)
@@ -36,12 +39,18 @@ def train(
 
     featurizer = MelSpectrogram(mel_config).to(device)
     model = FastSpeech(1000, fconfig).to(device)
+    if model_path is not None:
+        print('Loading model checkpoint')
+        model.load_state_dict(torch.load(model_cp_path, map_location=device))
     aligner = GraphemeAligner().to(device)
     if vocoder is not None:
         vocoder = vocoder.to(device).eval()
     optimizer = torch.optim.Adam(model.parameters(), train_config.lr, (.9, .98))
-    total_config = {**train_config.__dict__ ,**mel_config.__dict__, **fconfig.__dict__}
-    wandb.init(name=train_config.wandb_name, project=train_config.wandb_project, config=total_config)
+    total_config = {**train_config.__dict__, **mel_config.__dict__, **fconfig.__dict__}
+    wandb.init(
+        name=train_config.wandb_name, project=train_config.wandb_project,
+        config=total_config, resume=wandb_resume[0], id=wandb_resume[1]
+    )
     min_loss = None
     for i in range(train_config.n_epochs):
         for j, batch in enumerate(train_dataloader):
@@ -59,9 +68,10 @@ def train(
             if batch.duration_preds.size() != batch.durations.size():
                 print('Batch skipped')
                 print(batch.transcript)
-                print('Predicted duration length:%d, aligner length: %d' % \
+                print('Predicted duration length:%d, aligner length: %d' %
                       (batch.duration_preds.size(1), batch.durations.size(1)))
                 continue
+            # print(batch.duration_preds, batch.durations)
             # print(batch.duration_preds.sum(1), batch.mel.size(-1), batch.durations.sum(1))
             dp_loss = F.mse_loss(batch.duration_preds, batch.durations)
             # print(output.size(), batch.mel.size())
