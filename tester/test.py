@@ -9,6 +9,7 @@ def test(vocoder: Vocoder, fconfig: FastSpeechConfig, model_path: str, transcrip
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     tokenizer = torchaudio.pipelines.TACOTRON2_GRIFFINLIM_CHAR_LJSPEECH.get_text_processor()
     model = FastSpeech(1000, fconfig)
+    vocoder = vocoder.to(device).eval()
     model.load_state_dict(torch.load(model_path, map_location=device))
     tokens, token_lengths = tokenizer(transcript)
     # for tokens_ in tokens:
